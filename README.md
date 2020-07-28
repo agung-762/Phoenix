@@ -9,7 +9,7 @@ If you want to create your own bot, you can basically follow the steps given [he
 
 You can also tap the button below to deploy straight to Heroku!
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/rsktg/Phoenix)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/agung-762/Phoenix)
 
 ## Credits
 [SkittBot](https://github.com/skittles9823/SkittBot) for stickers module.
