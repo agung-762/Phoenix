@@ -1,225 +1,98 @@
-# Copyright (C) 2019 The Raphielscape Company LLC.
-#
-# Licensed under the Raphielscape Public License, Version 1.d (the "License");
-# you may not use this file except in compliance with the License.
-#
+# Last.fm module by @TheRealPhoenix - https://github.com/agung-762/phoenix
 
-from asyncio import sleep
-from pylast import User, WSError
-from re import sub
-from urllib import parse
-from os import environ
-from sys import setrecursionlimit
+import requests
 
-from telethon.errors import AboutTooLongError
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.functions.users import GetFullUserRequest
-from telethon.errors.rpcerrorlist import FloodWaitError
+from telegram import Bot, Update, Message, Chat, ParseMode
+from telegram.ext import run_async, CommandHandler
 
-from userbot import CMD_HELP, BOTLOG, BOTLOG_CHATID, DEFAULT_BIO, BIO_PREFIX, lastfm, LASTFM_USERNAME, bot
-from userbot.events import register
+from tg_bot import dispatcher, LASTFM_API_KEY
+from tg_bot.modules.disable import DisableAbleCommandHandler
 
-# =================== CONSTANT ===================
-LFM_BIO_ENABLED = "```last.fm current music to bio is now enabled.```"
-LFM_BIO_DISABLED = "```last.fm current music to bio is now disabled. Bio reverted to default.```"
-LFM_BIO_RUNNING = "```last.fm current music to bio is already running.```"
-LFM_BIO_ERR = "```No option specified.```"
-LFM_LOG_ENABLED = "```last.fm logging to bot log is now enabled.```"
-LFM_LOG_DISABLED = "```last.fm logging to bot log is now disabled.```"
-LFM_LOG_ERR = "```No option specified.```"
-ERROR_MSG = "```last.fm module halted, got an unexpected error.```"
-
-ARTIST = 0
-SONG = 0
-USER_ID = 0
-
-if BIO_PREFIX:
-    BIOPREFIX = BIO_PREFIX
-else:
-    BIOPREFIX = None
-
-LASTFMCHECK = False
-RUNNING = False
-LastLog = False
-# ================================================
+import tg_bot.modules.sql.last_fm_sql as sql
 
 
-@register(outgoing=True, pattern="^.lastfm$")
-async def last_fm(lastFM):
-    """ For .lastfm command, fetch scrobble data from last.fm. """
-    await lastFM.edit("Processing...")
-    preview = None
-    playing = User(LASTFM_USERNAME, lastfm).get_now_playing()
-    username = f"https://www.last.fm/user/{LASTFM_USERNAME}"
-    if playing is not None:
-        try:
-            image = User(LASTFM_USERNAME,
-                         lastfm).get_now_playing().get_cover_image()
-        except IndexError:
-            image = None
-        tags = await gettags(isNowPlaying=True, playing=playing)
-        rectrack = parse.quote(f"{playing}")
-        rectrack = sub("^", "https://open.spotify.com/search/",
-                       rectrack)
+@run_async
+def set_user(bot: Bot, update: Update, args):
+    msg = update.effective_message
+    if args:
+        user = update.effective_user.id
+        username = " ".join(args)
+        sql.set_user(user, username)
+        msg.reply_text(f"Username set as {username}!")
+    else:
+        msg.reply_text("That's not how this works...\nRun /setuser followed by your username!")
+        
+
+@run_async
+def clear_user(bot: Bot, update: Update):
+    user = update.effective_user.id
+    sql.set_user(user, "")
+    update.effective_message.reply_text("Last.fm username successfully cleared from my database!")
+    
+  
+@run_async
+def last_fm(bot: Bot, update: Update):
+    msg = update.effective_message
+    user = update.effective_user.first_name
+    user_id = update.effective_user.id
+    username = sql.get_user(user_id)
+    if not username:
+        msg.reply_text("You haven't set your username yet!")
+        return
+    
+    base_url = "https://www.last.fm/account"
+    res = requests.get(f"{base_url}?method=user.getrecenttracks&limit=3&extended=1&user={username}&api_key={7ddc63ccc7e331e58febb45d5fd558fb}&format=json")
+    if not res.status_code == 200:
+        msg.reply_text("Hmm... something went wrong.\nPlease ensure that you've set the correct username!")
+        return
+        
+    try:
+        first_track = res.json().get("recenttracks").get("track")[0]
+    except IndexError:
+        msg.reply_text("You don't seem to have scrobbled any songs...")
+        return
+    if first_track.get("@attr"):
+        # Ensures the track is now playing
+        image = first_track.get("image")[3].get("#text") # Grab URL of 300x300 image
+        artist = first_track.get("artist").get("name")
+        song = first_track.get("name")
+        loved = int(first_track.get("loved"))
+        rep = f"{user} is currently listening to:\n"
+        if not loved:
+            rep += f"🎧  <code>{artist} - {song}</code>"
+        else:
+            rep += f"🎧  <code>{artist} - {song}</code> (♥️, loved)"
         if image:
-            output = f"[‎]({image})[{LASTFM_USERNAME}]({username}) __is now listening to:__\n\n• [{playing}]({rectrack})\n`{tags}`"
-            preview = True
-        else:
-            output = f"[{LASTFM_USERNAME}]({username}) __is now listening to:__\n\n• [{playing}]({rectrack})\n`{tags}`"
+            rep += f"<a href='{image}'>\u200c</a>"
     else:
-        recent = User(LASTFM_USERNAME, lastfm).get_recent_tracks(limit=3)
-        playing = User(LASTFM_USERNAME, lastfm).get_now_playing()
-        output = f"[{LASTFM_USERNAME}]({username}) __was last listening to:__\n\n"
-        for i, track in enumerate(recent):
-            print(i)
-            printable = await artist_and_song(track)
-            tags = await gettags(track)
-            rectrack = parse.quote(str(printable))
-            rectrack = sub("^",
-                           "https://open.spotify.com/search/",
-                           rectrack)
-            output += f"• [{printable}]({rectrack})\n"
-            if tags:
-                output += f"`{tags}`\n\n"
-    if preview is not None:
-        await lastFM.edit(f"{output}", parse_mode='md', link_preview=True)
-    else:
-        await lastFM.edit(f"{output}", parse_mode='md')
+        tracks = res.json().get("recenttracks").get("track")
+        track_dict = {tracks[i].get("artist").get("name"): tracks[i].get("name") for i in range(3)}
+        rep = f"{user} was listening to:\n"
+        for artist, song in track_dict.items():
+            rep += f"🎧  <code>{artist} - {song}</code>\n"
+        last_user = requests.get(f"{base_url}?method=user.getinfo&user={username}&api_key={7ddc63ccc7e331e58febb45d5fd558fb}&format=json").json().get("user")
+        scrobbles = last_user.get("playcount")
+        rep += f"\n(<code>{scrobbles}</code> scrobbles so far)"
+        
+    msg.reply_text(rep, parse_mode=ParseMode.HTML)
+    
+    
+__help__ = """
+Share what you're what listening to with the help of this module!
 
+*Available commands:*
+ - /setuser <username>: sets your last.fm username.
+ - /clearuser: removes your last.fm username from the bot's database.
+ - /lastfm: returns what you're scrobbling on last.fm.
+"""
 
-async def gettags(track=None, isNowPlaying=None, playing=None):
-    if isNowPlaying:
-        tags = playing.get_top_tags()
-        arg = playing
-        if not tags:
-            tags = playing.artist.get_top_tags()
-    else:
-        tags = track.track.get_top_tags()
-        arg = track.track
-    if not tags:
-        tags = arg.artist.get_top_tags()
-    tags = "".join([" #" + t.item.__str__() for t in tags[:5]])
-    tags = sub("^ ", "", tags)
-    tags = sub(" ", "_", tags)
-    tags = sub("_#", " #", tags)
-    return tags
+__mod_name__ = "Last.FM"
+    
 
+SET_USER_HANDLER = CommandHandler("setuser", set_user, pass_args=True)
+CLEAR_USER_HANDLER = CommandHandler("clearuser", clear_user)
+LASTFM_HANDLER = DisableAbleCommandHandler("lastfm", last_fm)
 
-async def artist_and_song(track):
-    return f"{track.track}"
-
-
-async def get_curr_track(lfmbio):
-    global ARTIST
-    global SONG
-    global LASTFMCHECK
-    global RUNNING
-    global USER_ID
-    oldartist = ""
-    oldsong = ""
-    while LASTFMCHECK:
-        try:
-            if USER_ID == 0:
-                USER_ID = (await lfmbio.client.get_me()).id
-            user_info = await bot(GetFullUserRequest(USER_ID))
-            RUNNING = True
-            playing = User(LASTFM_USERNAME, lastfm).get_now_playing()
-            SONG = playing.get_title()
-            ARTIST = playing.get_artist()
-            oldsong = environ.get("oldsong", None)
-            oldartist = environ.get("oldartist", None)
-            if playing is not None and SONG != oldsong and ARTIST != oldartist:
-                environ["oldsong"] = str(SONG)
-                environ["oldartist"] = str(ARTIST)
-                if BIOPREFIX:
-                    lfmbio = f"{BIOPREFIX} 🎧: {ARTIST} - {SONG}"
-                else:
-                    lfmbio = f"🎧: {ARTIST} - {SONG}"
-                try:
-                    if BOTLOG and LastLog:
-                        await bot.send_message(
-                            BOTLOG_CHATID,
-                            f"Attempted to change bio to\n{lfmbio}")
-                    await bot(UpdateProfileRequest(about=lfmbio))
-                except AboutTooLongError:
-                    short_bio = f"🎧: {SONG}"
-                    await bot(UpdateProfileRequest(about=short_bio))
-            else:
-                if playing is None and user_info.about != DEFAULT_BIO:
-                    await sleep(6)
-                    await bot(UpdateProfileRequest(about=DEFAULT_BIO))
-                    if BOTLOG and LastLog:
-                        await bot.send_message(
-                            BOTLOG_CHATID, f"Reset bio back to\n{DEFAULT_BIO}")
-        except AttributeError:
-            try:
-                if user_info.about != DEFAULT_BIO:
-                    await sleep(6)
-                    await bot(UpdateProfileRequest(about=DEFAULT_BIO))
-                    if BOTLOG and LastLog:
-                        await bot.send_message(
-                            BOTLOG_CHATID, f"Reset bio back to\n{DEFAULT_BIO}")
-            except FloodWaitError as err:
-                if BOTLOG and LastLog:
-                    await bot.send_message(BOTLOG_CHATID,
-                                           f"Error changing bio:\n{err}")
-        except FloodWaitError as err:
-            if BOTLOG and LastLog:
-                await bot.send_message(BOTLOG_CHATID,
-                                       f"Error changing bio:\n{err}")
-        except WSError as err:
-            if BOTLOG and LastLog:
-                await bot.send_message(BOTLOG_CHATID,
-                                       f"Error changing bio:\n{err}")
-        await sleep(2)
-    RUNNING = False
-
-
-@register(outgoing=True, pattern=r"^.lastbio (on|off)")
-async def lastbio(lfmbio):
-    arg = lfmbio.pattern_match.group(1).lower()
-    global LASTFMCHECK
-    global RUNNING
-    if arg == "on":
-        setrecursionlimit(700000)
-        if not LASTFMCHECK:
-            LASTFMCHECK = True
-            environ["errorcheck"] = "0"
-            await lfmbio.edit(LFM_BIO_ENABLED)
-            await sleep(4)
-            await get_curr_track(lfmbio)
-        else:
-            await lfmbio.edit(LFM_BIO_RUNNING)
-    elif arg == "off":
-        LASTFMCHECK = False
-        RUNNING = False
-        await bot(UpdateProfileRequest(about=DEFAULT_BIO))
-        await lfmbio.edit(LFM_BIO_DISABLED)
-    else:
-        await lfmbio.edit(LFM_BIO_ERR)
-
-
-@register(outgoing=True, pattern=r"^.lastlog (on|off)")
-async def lastlog(lstlog):
-    arg = lstlog.pattern_match.group(1).lower()
-    global LastLog
-    LastLog = False
-    if arg == "on":
-        LastLog = True
-        await lstlog.edit(LFM_LOG_ENABLED)
-    elif arg == "off":
-        LastLog = False
-        await lstlog.edit(LFM_LOG_DISABLED)
-    else:
-        await lstlog.edit(LFM_LOG_ERR)
-
-
-CMD_HELP.update({
-    'lastfm':
-    ".lastfm\
-    \nUsage: Shows currently scrobbling track or most recent scrobbles if nothing is playing.\
-    \n\nlastbio: .lastbio <on/off>\
-    \nUsage: Enables/Disables last.fm current playing to bio.\
-    \n\nlastlog: .lastlog <on/off>\
-    \nUsage: Enable/Disable last.fm bio logging in the bot-log group."
-})
+dispatcher.add_handler(SET_USER_HANDLER)
+dispatcher.add_handler(CLEAR_USER_HANDLER)
+dispatcher.add_handler(LASTFM_HANDLER)
