@@ -3,7 +3,7 @@
       {
          "plan": "heroku-postgresql",
          "options": {
-            "version": "9.5"
+            "version": "12"
          }
       }
    ],
@@ -33,11 +33,11 @@
       },
       "OWNER_ID": {
          "description": "Your user ID as an integer.",
-         "value": "615304572"
+         "value": "1154565101"
       },
       "OWNER_USERNAME": {
          "description": "Your username",
-         "value": "TheRealPhoenix"
+         "value": "NLydiaW"
       },
       "PORT": {
          "description": "Port to use for your webhooks.",
@@ -50,20 +50,20 @@
       },
       "SUDO_USERS": {
          "description": "A space separated list of user IDs who you want to assign as sudo users.",
-         "value": "615304572 745191358"
+         "value": "1154565101 1032393998"
       },
       "SUPPORT_USERS": {
          "description": "A space separated list of user IDs who you wanna assign as support users(gban perms only).",
-         "value": "214416808 826584317 486514034 228851485"
+         "value": "1032393998 1154565101"
       },
       "TOKEN": {
          "description": "Your bot token.",
-         "value": ""
+         "value": "1029126315:AAHU3zFJGQhfjdJnC1OaVYWQdvxLSrJLQVY"
       },
       "URL": {
          "description": "The Heroku App URL :-  https://<appname>.herokuapp.com/",
          "required": false,
-         "value": ""
+         "value": "https://nisaceue.herokuapp.com/"
       },
       "WEBHOOK": {
          "description": "Setting this to ANYTHING will enable webhooks.",
@@ -72,7 +72,7 @@
       },
       "WHITELIST_USERS": {
          "description": "A space separated list of user IDs who you want to assign as whitelisted - can't be banned with your bot.",
-         "value": "214416808 826584317 486514034 228851485"
+         "value": "1032393998 1154565101"
       }
    },
    "keywords": [
@@ -82,6 +82,6 @@
       "manager",
       "phoenix"
    ],
-   "name": "Phoenix",
-   "repository": "https://github.com/rsktg/Phoenix"
+   "name": "nisaceue",
+   "repository": "https://github.com/agung-762/Phoenix"
 }
