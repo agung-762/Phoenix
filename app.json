@@ -1,10 +1,10 @@
 {
    "addons": [
       {
-         "plan": "heroku-postgresql",
          "options": {
-            "version": "12"
-         }
+            "version": "9.5"
+         },
+         "plan": "heroku-postgresql"
       }
    ],
    "description": "Modular Telegram bot for managing your groups with a few extras!",
@@ -16,7 +16,7 @@
       "BAN_STICKER": {
          "description": "ID of the sticker you want to use when banning people.",
          "required": false,
-         "value": "CAADBQAD4wADfM2sJL9oYRrTPgH9FgQ"
+         "value": "CAADBQADfQADv7rGI0wxx1ORU7UzAg"
       },
       "DEL_CMDS": {
          "description": "Set this to True if you want to delete command messages from users who don't have the perms to run that command.",
@@ -24,8 +24,8 @@
       },
       "DONATION_LINK": {
          "description": "Optional: link where you would like to receive donations.",
-         "value": "https://www.paypal.me/PaulSonOfLars",
-         "required": false
+         "required": false,
+         "value": "https://www.paypal.me/PaulSonOfLars"
       },
       "ENV": {
          "description": "Setting this to ANYTHING will enable environment variables.",
@@ -33,11 +33,11 @@
       },
       "OWNER_ID": {
          "description": "Your user ID as an integer.",
-         "value": "1154565101"
+         "value": "615304572"
       },
       "OWNER_USERNAME": {
          "description": "Your username",
-         "value": "NLydiaW"
+         "value": "TheRealPhoenix"
       },
       "PORT": {
          "description": "Port to use for your webhooks.",
@@ -45,34 +45,39 @@
          "value": "8443"
       },
       "STRICT_GBAN": {
-         "description": "Enforce gbans across new groups as well as old groups. When a gbanned user talks, they will be banned.",
+         "description": "Enforce gbans across new groups as well as old groups. When a gbanned user talks, he will be banned.",
          "value": "True"
       },
       "SUDO_USERS": {
          "description": "A space separated list of user IDs who you want to assign as sudo users.",
-         "value": "1154565101 1032393998"
+         "value": "615304572 745191358"
       },
       "SUPPORT_USERS": {
          "description": "A space separated list of user IDs who you wanna assign as support users(gban perms only).",
-         "value": "1032393998 1154565101"
+         "value": "254318997 18673980 83489514"
+      },
+      "BL_CHATS": {
+          "description": "A space separated list of chat IDs to blacklist. Bot will leave those chats when added to them.",
+          "required": false,
+          "value": ""
       },
       "TOKEN": {
          "description": "Your bot token.",
-         "value": "1029126315:AAHU3zFJGQhfjdJnC1OaVYWQdvxLSrJLQVY"
+         "value": ""
       },
       "URL": {
          "description": "The Heroku App URL :-  https://<appname>.herokuapp.com/",
          "required": false,
-         "value": "https://nisaceue.herokuapp.com/"
+         "value": ""
       },
       "WEBHOOK": {
          "description": "Setting this to ANYTHING will enable webhooks.",
          "required": false,
-         "value": "ANYTHING"
+         "value": ""
       },
       "WHITELIST_USERS": {
          "description": "A space separated list of user IDs who you want to assign as whitelisted - can't be banned with your bot.",
-         "value": "1032393998 1154565101"
+         "value": "254318997 18673980 83489514"
       }
    },
    "keywords": [
@@ -82,6 +87,6 @@
       "manager",
       "phoenix"
    ],
-   "name": "nisaceue",
-   "repository": "https://github.com/agung-762/Phoenix"
+   "name": "Phoenix",
+   "repository": "https://github.com/rsktg/TheRealPhoenixBot"
 }
